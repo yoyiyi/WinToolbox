@@ -10,6 +10,10 @@
 - 发布包下载：<https://github.com/yoyiyi/WinToolbox/releases>
 - 问题反馈：<https://github.com/yoyiyi/WinToolbox/issues>
 
+## 界面
+
+![WinToolbox 概览页](docs/screenshots/dashboard.jpg)
+
 ## 下载与运行
 
 从 [Releases](https://github.com/yoyiyi/WinToolbox/releases) 下载 `WinToolbox-*-portable.zip`，解压后双击 `WinToolbox.exe`。整个 `WinToolbox` 文件夹可以复制到其他 Windows 电脑运行，不需要安装 Python。

@@ -1,0 +1,2 @@
+# WinToolbox 运行时不需要第三方 Python 库。
+# 仅使用 Python 标准库（tkinter / ctypes / winreg / subprocess）。

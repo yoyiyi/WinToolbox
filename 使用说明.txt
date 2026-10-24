@@ -1,0 +1,37 @@
+WinToolbox · Windows 工具箱  v1.0.0
+====================================
+
+双击 WinToolbox.exe 运行。整个 WinToolbox 文件夹可以复制到其他 Windows 电脑使用，
+不需要安装 Python 或任何运行库。
+
+功能
+----
+1. 概览
+2. 内存加速
+3. 应用更新（winget）
+4. 后台进程
+5. 硬件检测：硬件概览、显示器 EDID、磁盘健康
+6. 验机工具：内置屏幕/键盘/鼠标测试；第三方验机软件检测、启动与安装
+7. 大文件扫描
+8. 应用卸载
+9. 启动项
+
+无显示器/远程服务器
+-------------------
+GUI 仍需要 Windows 桌面会话；没有桌面时可生成无界面报告：
+
+  WinToolbox.exe --headless --output D:\hardware-report.txt
+  WinToolbox.exe --headless --json --output D:\hardware-report.json
+
+不指定 --output 时写入 %LOCALAPPDATA%\WinToolbox\reports\hardware-report.txt。
+
+注意
+----
+- 内存加速回收工作集，不会增加物理内存；默认跳过系统进程和前台窗口。
+- 第三方验机工具不随工具箱分发：已安装直接启动；未安装可尝试 winget 或官网。
+- 安装第三方工具前会二次确认，可能涉及网络、UAC 和第三方许可。
+- 大文件移入回收站需要确认；系统目录和系统文件受保护。
+- 结束进程、卸载应用前请保存工作。
+- 日志与配置保存在 %LOCALAPPDATA%\WinToolbox。
+
+项目地址: https://github.com/yoyiyi/WinToolbox

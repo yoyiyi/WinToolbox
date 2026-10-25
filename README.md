@@ -30,19 +30,42 @@ python app.py
 
 ## 功能
 
-左侧导航共 9 项，快捷键 `Ctrl+1` 到 `Ctrl+9`：
+左侧导航共 10 项，快捷键 `Ctrl+1` 到 `Ctrl+9`，第 10 项使用 `Ctrl+0`：
 
 | 页面 | 作用 |
 | --- | --- |
+| 硬件信息 | 型号/系统/运行时间和处理器、主板、内存、显卡、显示器、磁盘、声卡、网卡 |
 | 概览 | 更新、应用、后台进程、卸载建议和系统状态 |
 | 内存加速 | 圆形内存仪表、整理后台闲置工作集、释放结果 |
+| 自启动管理 | Run 键/启动文件夹查看，支持启用与禁用 |
 | 应用更新 | winget 环境检测、可用更新、批量升级、实时输出 |
-| 后台进程 | 进程 CPU/内存/用户/路径，结束非系统进程 |
-| 硬件检测 | CPU、主板/BIOS、显卡、显示器 EDID、内存、网卡；磁盘健康 |
-| 验机工具 | 屏幕坏点、键盘、鼠标测试；第三方验机软件检测、启动与安装 |
-| 大文件扫描 | 按磁盘和阈值扫描大文件，筛选、定位、移入回收站 |
 | 应用卸载 | 注册表应用清单、启发式建议、调用原厂卸载程序 |
-| 启动项 | Run 键和启动文件夹只读视图 |
+| 大文件扫描 | 按磁盘和阈值扫描大文件，筛选、定位、移入回收站 |
+| 后台进程检测 | 进程 CPU/内存/用户/路径，结束非系统进程 |
+| 硬件检测 | 硬件详情、显示器 EDID、磁盘健康 |
+| 常用验机工具 | 屏幕/键盘/鼠标测试；CPU-Z、GPU-Z、AIDA64 等工具 |
+
+### 硬件信息
+
+![硬件信息](docs/screenshots/hardware-info.png)
+
+参考常用的“型号信息 / 系统信息 / 运行时间 + 详细信息”布局：
+
+- 型号、系统版本和开机运行时间。
+- 处理器、主板、内存容量/类型/频率、显卡、显示器尺寸/接口。
+- 磁盘型号/容量、NPU、声卡和网卡清单。
+- “复制信息”导出当前清单；温度、SMART 和磁盘健康在“硬件检测”页查看。
+
+### 自启动管理
+
+- 枚举并管理 `HKCU/HKLM ...\Run`、WOW6432Node Run，以及当前用户/所有用户的启动文件夹。
+- 通过 `StartupApproved` 显示启用/禁用状态。
+- 详情栏可直接启用/禁用：
+  - 注册表项写入对应的 `StartupApproved` 值。
+  - 启动文件夹项目重命名为 `.wintoolbox-disabled`，启用时恢复原名，便于撤销。
+  - 所有用户的系统级项目需要管理员权限。
+- 修改只影响下次登录，不会立即结束正在运行的程序。
+- 仍保留“任务管理器”和“打开启动文件夹”入口。
 
 ### 硬件与显示器
 
@@ -80,7 +103,7 @@ WinToolbox.exe --headless --json --output D:\hardware-report.json
 不指定 `--output` 时写入：
 
 ```text
-%LOCALAPPDATA%\WinToolbox\reports\hardware-report.txt
+%LOCALAPPDATA%\WinToolboxData\reports\hardware-report.txt
 ```
 
 报告包含硬件、显示器/会话、物理磁盘和卷信息。
@@ -100,10 +123,10 @@ out\
     _internal\
     README.md
     使用说明.txt
-  WinToolbox-1.0.0-portable.zip
+  WinToolbox-1.0.1-portable.zip
 ```
 
-`out/` 是构建产物，不提交到 Git。需要发布时，把 `out/WinToolbox-1.0.0-portable.zip` 上传到 GitHub Releases。
+`out/` 是构建产物，不提交到 Git。需要发布时，把 `out/WinToolbox-1.0.1-portable.zip` 上传到 GitHub Releases。
 
 手动构建：
 
@@ -143,14 +166,14 @@ out/                      构建产物（Git 忽略）
 python -m unittest discover -s tests -v
 ```
 
-测试覆盖 winget 解析、卸载建议、大文件扫描、内存加速、硬件/显示器解析、headless 报告、工具目录和命令拆分。
+测试覆盖 winget 解析、卸载建议、大文件扫描、内存加速、硬件/显示器解析、headless 报告、工具目录、启动项状态值和命令拆分。
 
 ## 数据与隐私
 
 - 所有扫描和判断都在本机完成，不上传应用列表、进程信息或硬件信息。
-- 日志和配置保存在 `%LOCALAPPDATA%\WinToolbox`；可用 `WINTOOLBOX_HOME` 覆盖。
+- 日志和配置保存在 `%LOCALAPPDATA%\WinToolboxData`；可用 `WINTOOLBOX_HOME` 覆盖。
 - 源码和仓库不包含 token、API key、账号密码、本机日志或配置文件。
-- 请勿把 `out/`、`%LOCALAPPDATA%\WinToolbox`、`.runtime/` 或个人配置提交到 Git。
+- 请勿把 `out/`、`%LOCALAPPDATA%\WinToolboxData`、`.runtime/` 或个人配置提交到 Git。
 - 第三方验机工具从 winget/官网获取，项目不重新分发其安装包。
 
 ## 安全边界

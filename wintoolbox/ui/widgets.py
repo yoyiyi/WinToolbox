@@ -130,7 +130,7 @@ class SidebarItem(tk.Frame):
         command: Callable[[], None],
         shortcut: str = "",
     ) -> None:
-        super().__init__(parent, bg=C.SIDEBAR, height=40, cursor="hand2")
+        super().__init__(parent, bg=C.SIDEBAR, height=36, cursor="hand2")
         self._command = command
         self._selected = False
         self.pack_propagate(False)

@@ -6,7 +6,26 @@
 
 from __future__ import annotations
 
+import os
 import sys
+import traceback
+from pathlib import Path
+
+
+def _write_startup_error() -> None:
+    """窗口化 exe 没有控制台，把早期异常落盘以便诊断。"""
+    detail = traceback.format_exc()
+    candidates = []
+    local = Path.home() / "AppData" / "Local"
+    candidates.append(local / "WinToolbox" / "logs" / "startup-error.log")
+    candidates.append(Path(__file__).resolve().parent / "startup-error.log")
+    for path in candidates:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(detail, encoding="utf-8")
+            return
+        except OSError:
+            continue
 
 
 def main() -> int:
@@ -19,9 +38,18 @@ def main() -> int:
         from wintoolbox.headless import run_headless
 
         return run_headless(sys.argv[1:])
-    from wintoolbox.ui.app import run
+    if not os.environ.get("WINTOOLBOX_HOME"):
+        local = os.environ.get("LOCALAPPDATA") or str(
+            Path.home() / "AppData" / "Local"
+        )
+        os.environ["WINTOOLBOX_HOME"] = str(Path(local) / "WinToolboxData")
+    try:
+        from wintoolbox.ui.app import run
 
-    run()
+        run()
+    except BaseException:
+        _write_startup_error()
+        raise
     return 0
 
 

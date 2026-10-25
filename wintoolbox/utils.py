@@ -10,14 +10,16 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 from datetime import date, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Iterable
 
-APP_DIR_NAME = "WinToolbox"
+APP_DIR_NAME = "WinToolboxData"
 LOGGER_NAME = "wintoolbox"
+_WINDOW_GEOMETRY = re.compile(r"^(?P<w>\d+)x(?P<h>\d+)")
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +40,12 @@ def app_data_dir() -> Path:
     else:
         local = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
         path = Path(local) / APP_DIR_NAME
-    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # 某些受限/虚拟化环境下用户 AppData 不可创建，退到系统临时目录
+        path = Path(tempfile.gettempdir()) / APP_DIR_NAME
+        path.mkdir(parents=True, exist_ok=True)
     return path
 
 
@@ -304,6 +311,38 @@ def creation_flags() -> int:
 
 def check_winget_path() -> str | None:
     return shutil.which("winget")
+
+
+def fit_window_geometry(
+    saved: str,
+    screen_width: int,
+    screen_height: int,
+    default: tuple[int, int] = (1360, 860),
+    min_size: tuple[int, int] = (1000, 640),
+) -> str:
+    """把保存的窗口几何限制在当前屏幕内，并重新居中。
+
+    旧配置可能来自更大的显示器；直接恢复会让窗口和关闭按钮落到屏幕外。
+    """
+    sw = max(800, int(screen_width))
+    sh = max(600, int(screen_height))
+    max_w = max(20, sw - 80)
+    max_h = max(20, sh - 120)
+    match = _WINDOW_GEOMETRY.match(saved or "")
+    width = height = 0
+    if match:
+        width = int(match.group("w"))
+        height = int(match.group("h"))
+    if width < 900 or height < 600 or width > max_w or height > max_h:
+        width, height = default
+    width = max(min_size[0], min(width, max_w, sw - 40))
+    height = max(min_size[1], min(height, max_h, sh - 80))
+    # 极小屏幕下 min_size 可能仍大于可用区域，最后再硬限制一次
+    width = max(320, min(width, sw - 20))
+    height = max(240, min(height, sh - 40))
+    x = min(max(10, (sw - width) // 2), max(0, sw - width - 10))
+    y = min(max(10, (sh - height) // 2 - 18), max(0, sh - height - 60))
+    return f"{width}x{height}+{x}+{y}"
 
 
 def run_powershell(script: str, timeout: int = 60) -> tuple[int, str]:

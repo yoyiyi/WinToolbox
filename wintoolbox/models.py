@@ -149,6 +149,19 @@ class StartupEntry:
     scope: str
     source: str
     enabled: bool = True
+    registry_root: int = 0
+    registry_path: str = ""
+    approved_path: str = ""
+    view_flag: int = 0
+    value_name: str = ""
+    folder_path: str = ""
+
+
+@dataclass(slots=True)
+class StartupToggleResult:
+    ok: bool
+    enabled: bool = True
+    message: str = ""
 
 
 @dataclass(slots=True)
@@ -308,6 +321,8 @@ class HardwareInfo:
     screen_refresh: int = 0
     remote_session: bool = False
     monitors: list[MonitorInfo] = field(default_factory=list)
+    sound_devices: list[str] = field(default_factory=list)
+    npu_devices: list[str] = field(default_factory=list)
     modules: list[MemoryModule] = field(default_factory=list)
     gpus: list[GPUInfo] = field(default_factory=list)
     network: list[NetworkAdapter] = field(default_factory=list)

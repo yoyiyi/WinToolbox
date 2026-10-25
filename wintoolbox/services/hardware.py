@@ -140,6 +140,8 @@ $monitors = @(foreach ($m in $monitorIds) {
         active = if ($null -ne $b) { [bool]$b.Active } else { $false }
     }
 })
+$sounds = @(Get-CimInstance Win32_SoundDevice | ForEach-Object { $_.Name } | Where-Object { $_ } | Select-Object -Unique)
+$npus = @(Get-CimInstance Win32_PnPEntity | Where-Object { $_.Name -match 'NPU|AI Boost|Neural' } | ForEach-Object { $_.Name } | Select-Object -Unique)
 $cfg = @(Get-CimInstance Win32_NetworkAdapterConfiguration -Filter "IPEnabled=True")
 $nets = @(Get-CimInstance Win32_NetworkAdapter -Filter "PhysicalAdapter=True" | ForEach-Object {
     $n = $_
@@ -176,6 +178,8 @@ $nets = @(Get-CimInstance Win32_NetworkAdapter -Filter "PhysicalAdapter=True" | 
     gpus = $gpus
     modules = $modules
     monitors = $monitors
+    sounds = $sounds
+    npus = $npus
     network = $nets
 } | ConvertTo-Json -Depth 6 -Compress
 """
@@ -486,6 +490,8 @@ def parse_hardware_json(payload: dict[str, Any]) -> HardwareInfo:
         bios_date=_text(payload.get("bios_date")),
         memory_total=max(0, _int(payload.get("total_memory"))),
         monitors=monitors,
+        sound_devices=[_text(value) for value in _as_list(payload.get("sounds")) if _text(value)],
+        npu_devices=[_text(value) for value in _as_list(payload.get("npus")) if _text(value)],
         modules=modules,
         gpus=gpus,
         network=network,

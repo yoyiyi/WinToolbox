@@ -14,7 +14,7 @@ if %errorlevel%==0 (
 if errorlevel 1 goto :failed
 
 if exist "out\WinToolbox" rmdir /s /q "out\WinToolbox"
-if exist "out\WinToolbox-1.0.0-portable.zip" del /q "out\WinToolbox-1.0.0-portable.zip"
+if exist "out\WinToolbox-1.0.1-portable.zip" del /q "out\WinToolbox-1.0.1-portable.zip"
 
 %PYTHON% -m PyInstaller --noconfirm --clean --windowed --onedir ^
     --name WinToolbox ^
@@ -30,18 +30,18 @@ copy /y "README.md" "out\WinToolbox\README.md" >nul
 copy /y "使用说明.txt" "out\WinToolbox\使用说明.txt" >nul
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "Compress-Archive -LiteralPath 'out\WinToolbox' -DestinationPath 'out\WinToolbox-1.0.0-portable.zip' -Force"
+  "Compress-Archive -LiteralPath 'out\WinToolbox' -DestinationPath 'out\WinToolbox-1.0.1-portable.zip' -Force"
 if errorlevel 1 goto :failed
 
 powershell -NoProfile -Command ^
-  "$h=(Get-FileHash 'out\WinToolbox-1.0.0-portable.zip' -Algorithm SHA256).Hash; Set-Content 'out\SHA256SUMS.txt' $h -Encoding ascii"
+  "$h=(Get-FileHash 'out\WinToolbox-1.0.1-portable.zip' -Algorithm SHA256).Hash; Set-Content 'out\SHA256SUMS.txt' $h -Encoding ascii"
 
 echo.
 echo 构建完成:
 echo   out\WinToolbox\WinToolbox.exe
-echo   out\WinToolbox-1.0.0-portable.zip
+echo   out\WinToolbox-1.0.1-portable.zip
 echo.
-echo 发布时把 out\WinToolbox-1.0.0-portable.zip 上传到 GitHub Releases。
+echo 发布时把 out\WinToolbox-1.0.1-portable.zip 上传到 GitHub Releases。
 pause
 exit /b 0
 

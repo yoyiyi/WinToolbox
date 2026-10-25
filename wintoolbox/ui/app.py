@@ -30,6 +30,7 @@ from ..services.system import SystemService
 from ..services.winget import WingetService
 from ..utils import (
     enable_dpi_awareness,
+    fit_window_geometry,
     get_logger,
     resource_path,
     setup_logging,
@@ -62,7 +63,7 @@ class ToolboxApp(tk.Tk):
         self.logger = setup_logging()
         self.withdraw()
         self.title(APP_TITLE)
-        self.minsize(1200, 740)
+        self.minsize(1000, 640)
         self.configure(bg=C.BG)
         self._set_icon()
         apply_theme(self)
@@ -100,13 +101,17 @@ class ToolboxApp(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.report_callback_exception = self._report_callback_exception
 
-        geometry = str(self.config_store.get("geometry", "1360x860"))
+        saved_geometry = str(self.config_store.get("geometry", "1360x860"))
+        geometry = fit_window_geometry(
+            saved_geometry,
+            self.winfo_screenwidth(),
+            self.winfo_screenheight(),
+        )
         try:
             self.geometry(geometry)
         except tk.TclError:
             self.geometry("1360x860")
         self.update_idletasks()
-        self._center_window()
         self.deiconify()
         start_page = str(self.config_store.get("last_page", "dashboard"))
         if start_page not in {item["id"] for item in self._page_defs}:
@@ -119,6 +124,7 @@ class ToolboxApp(tk.Tk):
     def _build_page_defs(self) -> list[dict[str, Any]]:
         from .pages.dashboard import DashboardPage
         from .pages.hardware import HardwarePage
+        from .pages.hardwareinfo import HardwareInfoPage
         from .pages.largefiles import LargeFilesPage
         from .pages.memory import MemoryPage
         from .pages.processes import ProcessesPage
@@ -128,6 +134,13 @@ class ToolboxApp(tk.Tk):
         from .pages.updates import UpdatesPage
 
         return [
+            {
+                "id": "hardwareinfo",
+                "title": "硬件信息",
+                "subtitle": "型号、系统、运行时间和详细硬件清单",
+                "icon": "\uE7F8",
+                "factory": HardwareInfoPage,
+            },
             {
                 "id": "dashboard",
                 "title": "概览",
@@ -143,39 +156,18 @@ class ToolboxApp(tk.Tk):
                 "factory": MemoryPage,
             },
             {
+                "id": "startup",
+                "title": "自启动管理",
+                "subtitle": "查看并启用/禁用开机自启动项目",
+                "icon": "\uE7E8",
+                "factory": StartupPage,
+            },
+            {
                 "id": "updates",
                 "title": "应用更新",
                 "subtitle": "通过 winget 检测并升级已安装应用",
                 "icon": "\uE895",
                 "factory": UpdatesPage,
-            },
-            {
-                "id": "processes",
-                "title": "后台进程",
-                "subtitle": "查看正在运行的程序、资源占用与后台活动",
-                "icon": "\uE9D9",
-                "factory": ProcessesPage,
-            },
-            {
-                "id": "hardware",
-                "title": "硬件检测",
-                "subtitle": "硬件信息与磁盘健康状态",
-                "icon": "\uE772",
-                "factory": HardwarePage,
-            },
-            {
-                "id": "tools",
-                "title": "验机工具",
-                "subtitle": "屏幕/键盘/鼠标测试与常用验机软件",
-                "icon": "\uE74C",
-                "factory": ToolsPage,
-            },
-            {
-                "id": "largefiles",
-                "title": "大文件扫描",
-                "subtitle": "选择磁盘，扫描占用空间较大的文件",
-                "icon": "\uE8B7",
-                "factory": LargeFilesPage,
             },
             {
                 "id": "uninstall",
@@ -185,11 +177,32 @@ class ToolboxApp(tk.Tk):
                 "factory": UninstallPage,
             },
             {
-                "id": "startup",
-                "title": "启动项",
-                "subtitle": "检查开机自启动程序，减少不必要的后台负担",
-                "icon": "\uE7E8",
-                "factory": StartupPage,
+                "id": "largefiles",
+                "title": "大文件扫描",
+                "subtitle": "选择磁盘，扫描占用空间较大的文件",
+                "icon": "\uE8B7",
+                "factory": LargeFilesPage,
+            },
+            {
+                "id": "processes",
+                "title": "后台进程检测",
+                "subtitle": "查看正在运行的程序、资源占用与后台活动",
+                "icon": "\uE9D9",
+                "factory": ProcessesPage,
+            },
+            {
+                "id": "hardware",
+                "title": "硬件检测",
+                "subtitle": "硬件详情与磁盘健康状态",
+                "icon": "\uE772",
+                "factory": HardwarePage,
+            },
+            {
+                "id": "tools",
+                "title": "常用验机工具",
+                "subtitle": "屏幕/键盘/鼠标测试与常用验机软件",
+                "icon": "\uE74C",
+                "factory": ToolsPage,
             },
         ]
 
@@ -200,15 +213,6 @@ class ToolboxApp(tk.Tk):
                 self.iconbitmap(str(icon))
         except tk.TclError:
             pass
-
-    def _center_window(self) -> None:
-        width = self.winfo_width()
-        height = self.winfo_height()
-        screen_w = self.winfo_screenwidth()
-        screen_h = self.winfo_screenheight()
-        x = max(0, (screen_w - width) // 2)
-        y = max(0, (screen_h - height) // 2 - 18)
-        self.geometry(f"+{x}+{y}")
 
     # ------------------------------------------------------------------
     def _build_shell(self) -> None:
@@ -280,9 +284,9 @@ class ToolboxApp(tk.Tk):
                 icon=definition["icon"],
                 text=definition["title"],
                 command=lambda pid=definition["id"]: self.navigate(pid),
-                shortcut=f"Ctrl+{index}",
+                shortcut="Ctrl+0" if index == 10 else f"Ctrl+{index}",
             )
-            item.pack(fill="x", padx=12, pady=2)
+            item.pack(fill="x", padx=12, pady=1)
             self._nav_items[definition["id"]] = item
 
         spacer = tk.Frame(sidebar, bg=C.SIDEBAR)
@@ -399,7 +403,7 @@ class ToolboxApp(tk.Tk):
         self._status_label.grid(row=0, column=1, sticky="w", padx=(5, 0))
         tk.Label(
             bar,
-            text="F5 刷新   ·   Ctrl+1~9 切换   ·   数据仅在本机处理",
+            text="F5 刷新   ·   Ctrl+1~9 / Ctrl+0 切换   ·   数据仅在本机处理",
             bg=C.BG,
             fg=C.MUTED_DARK,
             font=FONTS["tiny"],
@@ -448,8 +452,9 @@ class ToolboxApp(tk.Tk):
     def _bind_shortcuts(self) -> None:
         self.bind("<F5>", lambda _e: self.refresh_current())
         for index, definition in enumerate(self._page_defs, start=1):
+            key = str(index) if index < 10 else "0"
             self.bind(
-                f"<Control-Key-{index}>",
+                f"<Control-Key-{key}>",
                 lambda _e, pid=definition["id"]: self.navigate(pid),
             )
 

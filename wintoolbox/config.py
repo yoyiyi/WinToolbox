@@ -27,7 +27,7 @@ class Config:
     def load(self) -> None:
         try:
             if self.path.exists():
-                raw = json.loads(self.path.read_text(encoding="utf-8"))
+                raw = json.loads(self.path.read_text(encoding="utf-8-sig"))
                 if isinstance(raw, dict):
                     self.data.update(raw)
         except (OSError, ValueError):

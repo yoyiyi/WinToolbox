@@ -8,6 +8,7 @@ from typing import Any
 
 from ...models import StartupEntry
 from ...utils import (
+    is_admin,
     open_startup_folder,
     open_task_manager,
     reveal_in_explorer,
@@ -20,6 +21,7 @@ from ..widgets import (
     DataTable,
     FlatButton,
     SearchBox,
+    ask_confirm,
     show_notice,
 )
 from .base import BasePage
@@ -31,6 +33,7 @@ class StartupPage(BasePage):
     def build(self) -> None:
         self._all: list[StartupEntry] = []
         self._selected: StartupEntry | None = None
+        self._by_iid: dict[str, StartupEntry] = {}
         self._sort_key = "status"
         self._sort_desc = False
         self._loading = False
@@ -64,8 +67,8 @@ class StartupPage(BasePage):
         tk.Label(
             inner,
             text=(
-                "此页为只读视图。禁用或启用启动项请使用任务管理器，避免直接修改注册表导致登录异常。"
-                "启动文件夹中的程序会在登录后自动运行。"
+                "可在本页启用或禁用启动项；所有用户的项目需要管理员权限。"
+                "禁用只影响下次登录，不会立即结束正在运行的程序。"
             ),
             bg=C.SURFACE_ALT,
             fg=C.MUTED,
@@ -157,7 +160,7 @@ class StartupPage(BasePage):
         self._stats_label.pack(side="left")
         tk.Label(
             meta,
-            text="·  只读视图，禁用启动项请使用任务管理器",
+            text="·  启动项开关在下方详情栏，系统级项目需要管理员",
             bg=C.BG,
             fg=C.MUTED_DARK,
             font=FONTS["tiny"],
@@ -205,6 +208,14 @@ class StartupPage(BasePage):
             compact=True,
         )
         self._copy_btn.pack(side="right")
+        self._toggle_btn = FlatButton(
+            top,
+            "禁用",
+            command=self._toggle_selected,
+            variant="secondary",
+            compact=True,
+        )
+        self._toggle_btn.pack(side="right", padx=(0, 4))
         self._open_btn = FlatButton(
             top,
             "打开位置",
@@ -226,6 +237,7 @@ class StartupPage(BasePage):
         self._detail_command.pack(fill="x", pady=(6, 0))
         self._copy_btn.set_enabled(False)
         self._open_btn.set_enabled(False)
+        self._toggle_btn.set_enabled(False)
 
     # ------------------------------------------------------------------
     def on_show(self) -> None:
@@ -294,11 +306,14 @@ class StartupPage(BasePage):
     def _render(self) -> None:
         entries = self._filtered()
         rows = []
+        self._by_iid = {}
         for index, item in enumerate(entries):
             tag = "enabled" if item.enabled else "disabled"
+            iid = f"{index}:{item.name}:{item.command[:30]}"
+            self._by_iid[iid] = item
             rows.append(
                 (
-                    f"{index}:{item.name}:{item.command[:30]}",
+                    iid,
                     (
                         item.name,
                         "已启用" if item.enabled else "已禁用",
@@ -340,41 +355,99 @@ class StartupPage(BasePage):
         self._stats_label.configure(
             text=f"共 {len(self._all)} 项  ·  已禁用 {disabled} 项  ·  注册表 {registry} / 启动文件夹 {folders}"
         )
+        selected_iid = ""
         if self._selected:
             for iid in self._table.tree.get_children():
                 values = self._table.tree.item(iid, "values")
                 if values and values[0] == self._selected.name and values[4] == self._selected.command:
-                    self._table.tree.selection_set(iid)
+                    selected_iid = iid
                     break
         elif self._table.tree.get_children():
-            self._table.select_first()
+            selected_iid = self._table.tree.get_children()[0]
+        if selected_iid:
+            self._table.tree.selection_set(selected_iid)
+            self._on_select()
+        else:
+            self._selected = None
             self._on_select()
 
     def _on_select(self) -> None:
         iid = self._table.selected_iid
-        if not iid:
+        item = self._by_iid.get(iid) if iid else None
+        if not item:
             self._selected = None
             self._detail_name.configure(text="选择一个启动项查看完整命令")
             self._detail_command.configure(text="注册表和启动文件夹中的自启动项目会在此汇总。")
             self._copy_btn.set_enabled(False)
             self._open_btn.set_enabled(False)
+            self._toggle_btn.set_enabled(False)
             return
-        values = self._table.tree.item(iid, "values")
-        if not values:
-            return
-        name, status, scope, source, command = values
-        self._selected = StartupEntry(
-            name=str(name),
-            command=str(command),
-            scope=str(scope),
-            source=str(source),
-            enabled=str(status) == "已启用",
+        self._selected = item
+        self._detail_name.configure(
+            text=f"{item.name}  ·  {'已启用' if item.enabled else '已禁用'}"
         )
-        self._detail_name.configure(text=f"{name}  ·  {status}")
-        self._detail_command.configure(text=str(command))
+        self._detail_command.configure(text=item.command)
         self._copy_btn.set_enabled(True)
-        self._open_btn.set_enabled(bool(self._extract_path(str(command))))
-        self.set_status(f"已选择启动项：{name}")
+        self._open_btn.set_enabled(bool(self._extract_path(item.command)))
+        needs_admin = item.scope.startswith("所有用户") and not is_admin()
+        self._toggle_btn.set_text(
+            "需管理员" if needs_admin else ("禁用" if item.enabled else "启用")
+        )
+        self._toggle_btn.set_enabled(not needs_admin)
+        self.set_status(
+            "系统级启动项需要管理员权限"
+            if needs_admin
+            else f"已选择启动项：{item.name}"
+        )
+
+    def _toggle_selected(self) -> None:
+        entry = self._selected
+        if not entry:
+            return
+        target = not entry.enabled
+        action = "启用" if target else "禁用"
+        scope_note = (
+            "该项目属于所有用户，可能需要管理员权限。"
+            if entry.scope.startswith("所有用户")
+            else "该项目属于当前用户。"
+        )
+        if not ask_confirm(
+            self,
+            f"{action}启动项",
+            f"确定要{action}「{entry.name}」吗？",
+            (
+                f"{scope_note}\n"
+                f"来源：{entry.source} / {entry.scope}\n"
+                "修改在下次登录时生效，不会立即结束当前正在运行的程序。"
+            ),
+            confirm_text=action,
+            danger=not target,
+        ):
+            return
+        self._toggle_btn.set_enabled(False)
+        self.set_status(f"正在{action}启动项…", "busy")
+
+        def done(result) -> None:
+            self._toggle_btn.set_enabled(True)
+            self.refresh()
+            if result.ok:
+                show_notice(self, f"{action}成功", result.message, kind="info")
+                self.set_status(result.message)
+            else:
+                show_notice(self, "修改失败", result.message, kind="warning")
+                self.set_status("启动项修改失败", "error")
+
+        def failed(exc: Exception) -> None:
+            self._toggle_btn.set_enabled(True)
+            self.set_status("启动项修改失败", "error")
+            show_notice(self, "修改失败", str(exc), kind="error")
+
+        self.app.runner.submit(
+            lambda: self.services["startup"].set_enabled(entry, target),
+            done,
+            failed,
+            name="startup-toggle",
+        )
 
     def _extract_path(self, command: str) -> str:
         from ...utils import command_executable

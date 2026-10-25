@@ -5,6 +5,7 @@ from datetime import date
 
 from wintoolbox.utils import (
     decode_console,
+    fit_window_geometry,
     human_bytes,
     human_duration,
     normalize_msi_uninstall,
@@ -47,6 +48,36 @@ class FormatTests(unittest.TestCase):
         )
         self.assertEqual(
             normalize_msi_uninstall("MsiExec.exe /X{ABC}"), "MsiExec.exe /X{ABC}"
+        )
+
+
+class WindowGeometryTests(unittest.TestCase):
+    def _parse(self, value: str) -> tuple[int, int, int, int]:
+        size, x, y = value.split("+")
+        width, height = size.split("x")
+        return int(width), int(height), int(x), int(y)
+
+    def test_oversized_geometry_falls_back_and_centers(self) -> None:
+        width, height, x, y = self._parse(
+            fit_window_geometry("1717x1340+534+521", 2560, 1440)
+        )
+        self.assertEqual((width, height), (1360, 860))
+        self.assertGreaterEqual(x, 10)
+        self.assertGreaterEqual(y, 10)
+        self.assertLessEqual(x + width, 2560)
+        self.assertLessEqual(y + height, 1440)
+
+    def test_small_screen_is_clamped(self) -> None:
+        width, height, x, y = self._parse(
+            fit_window_geometry("1717x1340+100+100", 1366, 768)
+        )
+        self.assertLessEqual(x + width, 1366)
+        self.assertLessEqual(y + height, 768)
+
+    def test_normal_geometry_is_preserved(self) -> None:
+        self.assertEqual(
+            fit_window_geometry("1400x900+0+0", 2560, 1440),
+            "1400x900+580+252",
         )
 
 

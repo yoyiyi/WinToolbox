@@ -47,6 +47,31 @@ MEMORY_TYPE_NAMES = {
     39: "GDDR6",
 }
 
+PNP_MANUFACTURERS = {
+    "AOC": "AOC",
+    "PHL": "Philips",
+    "DEL": "Dell",
+    "SAM": "Samsung",
+    "LEN": "Lenovo",
+    "HWP": "HP",
+    "BNQ": "BenQ",
+    "ACR": "Acer",
+    "ASU": "ASUS",
+    "MSI": "MSI",
+    "GSM": "LG",
+    "VSC": "ViewSonic",
+    "EIZ": "EIZO",
+    "NEC": "NEC",
+    "SII": "Seiko",
+    "APP": "Apple",
+    "IBM": "IBM",
+    "HKC": "HKC",
+    "SKY": "Skyworth",
+    "TCL": "TCL",
+    "HAI": "Hisense",
+    "XIA": "Xiaomi",
+}
+
 CONNECTION_NAMES = {
     -1: "其他",
     0: "VGA",
@@ -126,9 +151,12 @@ function Decode-Id($values) {
 $monitorIds = @(Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorID)
 $monitorBasic = @(Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams)
 $monitorConn = @(Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorConnectionParams)
+$sourceModes = @(Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorListedSupportedSourceModes)
 $monitors = @(foreach ($m in $monitorIds) {
     $b = $monitorBasic | Where-Object { $_.InstanceName -eq $m.InstanceName } | Select-Object -First 1
     $c = $monitorConn | Where-Object { $_.InstanceName -eq $m.InstanceName } | Select-Object -First 1
+    $sm = $sourceModes | Where-Object { $_.InstanceName -eq $m.InstanceName } | Select-Object -First 1
+    $mode = @($sm.MonitorSourceModes) | Sort-Object { [int64]$_.HorizontalActivePixels * [int64]$_.VerticalActivePixels } -Descending | Select-Object -First 1
     [pscustomobject]@{
         name = Decode-Id $m.UserFriendlyName
         manufacturer = Decode-Id $m.ManufacturerName
@@ -136,6 +164,7 @@ $monitors = @(foreach ($m in $monitorIds) {
         year = $m.YearOfManufacture
         width_cm = $b.MaxHorizontalImageSize
         height_cm = $b.MaxVerticalImageSize
+        resolution = if ($mode) { "$($mode.HorizontalActivePixels)x$($mode.VerticalActivePixels)" } else { "" }
         connection = $c.VideoOutputTechnology
         active = if ($null -ne $b) { [bool]$b.Active } else { $false }
     }
@@ -419,7 +448,10 @@ def parse_hardware_json(payload: dict[str, Any]) -> HardwareInfo:
             if width_cm and height_cm
             else 0.0
         )
-        manufacturer = _text(item.get("manufacturer"))
+        manufacturer_code = _text(item.get("manufacturer"))
+        manufacturer = PNP_MANUFACTURERS.get(
+            manufacturer_code.upper(), manufacturer_code
+        )
         name = _text(item.get("name")) or "未知显示器"
         monitors.append(
             MonitorInfo(
@@ -430,6 +462,7 @@ def parse_hardware_json(payload: dict[str, Any]) -> HardwareInfo:
                 width_cm=width_cm,
                 height_cm=height_cm,
                 size_inches=size_inches,
+                resolution=_text(item.get("resolution")),
                 connection=CONNECTION_NAMES.get(
                     _int(item.get("connection"), -999), _text(item.get("connection"))
                 )

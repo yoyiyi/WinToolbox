@@ -268,8 +268,17 @@ class HardwareInfoPage(BasePage):
         )
         self._values["monitor"].configure(
             text="\n".join(
-                f"{monitor.name}"
+                (
+                    f"{monitor.manufacturer} {monitor.name}".strip()
+                    if monitor.manufacturer
+                    else monitor.name
+                )
                 + (f"（{monitor.size_inches:g} 英寸）" if monitor.size_inches else "")
+                + (
+                    f" · {monitor.resolution.replace('x', '×')}"
+                    if monitor.resolution
+                    else ""
+                )
                 + (f" · {monitor.connection}" if monitor.connection else "")
                 for monitor in info.monitors
             )

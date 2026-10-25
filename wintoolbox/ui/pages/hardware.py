@@ -339,6 +339,7 @@ class HardwarePage(BasePage):
                 ("name", "显示器", 220, "w"),
                 ("vendor", "厂商", 80, "w"),
                 ("size", "尺寸", 80, "e"),
+                ("resolution", "分辨率", 110, "e"),
                 ("year", "年份", 60, "e"),
                 ("connection", "接口", 90, "w"),
                 ("serial", "序列号", 150, "w"),
@@ -663,6 +664,9 @@ class HardwarePage(BasePage):
                         truncate_middle(monitor.name, 24),
                         monitor.manufacturer or "—",
                         f'{monitor.size_inches:g}"' if monitor.size_inches else "—",
+                        monitor.resolution.replace("x", "×")
+                        if monitor.resolution
+                        else "—",
                         str(monitor.year) if monitor.year else "—",
                         connection_short.get(monitor.connection, monitor.connection or "—"),
                         truncate_middle(monitor.serial or "—", 18),

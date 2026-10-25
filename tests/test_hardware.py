@@ -68,6 +68,7 @@ class HardwareParseTests(unittest.TestCase):
                         "year": 2024,
                         "width_cm": 60,
                         "height_cm": 34,
+                        "resolution": "3840x2160",
                         "connection": 10,
                         "active": True,
                     }
@@ -76,6 +77,8 @@ class HardwareParseTests(unittest.TestCase):
         )
         self.assertEqual(len(info.monitors), 1)
         self.assertEqual(info.monitors[0].name, "Test Monitor")
+        self.assertEqual(info.monitors[0].manufacturer, "Dell")
+        self.assertEqual(info.monitors[0].resolution, "3840x2160")
         self.assertEqual(info.monitors[0].connection, "DisplayPort")
         self.assertAlmostEqual(info.monitors[0].size_inches, 27.2, places=1)
         self.assertTrue(info.monitors[0].active)

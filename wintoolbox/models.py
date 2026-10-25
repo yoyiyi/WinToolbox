@@ -291,6 +291,7 @@ class MonitorInfo:
     width_cm: int = 0
     height_cm: int = 0
     size_inches: float = 0.0
+    resolution: str = ""
     connection: str = ""
     active: bool = False
 
